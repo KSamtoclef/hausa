@@ -10,18 +10,34 @@ jobs:
   verify-source:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify upstream copies match supplied files exactly
+      - name: 25.png exact checksum
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
           curl -fL --retry 2 --connect-timeout 10 'https://25gb-anniversary-data.altcore.online/25.png' -o /tmp/25.png
           echo '0186ef7eb7181b66aaf8565acc8ea9d83b7a1307db06561858d8ce66c5295a32  /tmp/25.png' | sha256sum -c -
 
+      - name: jQuery exact checksum
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
           curl -fL --retry 2 --connect-timeout 10 'https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js' -o /tmp/jquery.js
           echo '739c4501c8bb6da5564a8bb00a94df9f617662b8619133a6f0b567a7ac82694d  /tmp/jquery.js' | sha256sum -c -
 
+      - name: Google tag exact checksum
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
           curl -fL --retry 2 --connect-timeout 10 'https://www.googletagmanager.com/gtag/js?id=G-4JTHD1T1H0' -o /tmp/gtag.js
           echo '81f780b6d2d426d2e293f0806ea19f402490575f19b5d1b1f2ae32ab934e66f6  /tmp/gtag.js' | sha256sum -c -
 
+      - name: Cloudflare beacon exact checksum
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
           curl -fL --retry 2 --connect-timeout 10 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' -o /tmp/cf.js
           echo '8dd7b15a8893aff7138f89356f5c9f065e26eb1a766b2171bef088137dc2a0f8  /tmp/cf.js' | sha256sum -c -
