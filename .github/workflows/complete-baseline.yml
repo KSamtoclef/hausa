@@ -1,0 +1,37 @@
+name: Complete baseline migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.payload/READY'
+
+permissions:
+  contents: write
+
+jobs:
+  complete-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out migration payload
+        uses: actions/checkout@v4
+
+      - name: Reassemble and verify supplied site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .payload/chunk_*.txt | base64 --decode > /tmp/hausa-demo.zip
+          echo "09543707e73d99ca7aee052b22f96592453e440f77f0946989a3c4320b1e7927  /tmp/hausa-demo.zip" | sha256sum -c -
+          unzip -t /tmp/hausa-demo.zip
+
+      - name: Install exact baseline tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .payload .migration-init .github
+          unzip -q /tmp/hausa-demo.zip -d .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Baseline original duplicate"
+          git push origin HEAD:main
