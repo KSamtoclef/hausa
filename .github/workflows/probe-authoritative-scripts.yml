@@ -1,0 +1,44 @@
+name: Probe authoritative saved scripts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.authoritative-script-probe-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check exact script sources against authoritative ZIP hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > .authoritative-script-matches
+          check() {
+            name="$1"; sha="$2"; url="$3"
+            if curl -fL --retry 2 --connect-timeout 10 "$url" -o /tmp/probe.bin >/dev/null 2>&1; then
+              got=$(sha256sum /tmp/probe.bin | awk '{print $1}')
+              size=$(stat -c %s /tmp/probe.bin)
+              if [ "$got" = "$sha" ]; then
+                printf '%s|MATCH|%s|%s\n' "$name" "$size" "$url" >> .authoritative-script-matches
+              else
+                printf '%s|MISS|%s|%s|%s\n' "$name" "$size" "$got" "$url" >> .authoritative-script-matches
+              fi
+            else
+              printf '%s|FETCH_FAIL|%s\n' "$name" "$url" >> .authoritative-script-matches
+            fi
+          }
+          check jquery_google 540bc6dec1dd4b92ea4d3fb903f69eabf6d919afd48f4e312b163c28cff0f441 'https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js'
+          check jquery_code 540bc6dec1dd4b92ea4d3fb903f69eabf6d919afd48f4e312b163c28cff0f441 'https://code.jquery.com/jquery-1.11.1.min.js'
+          check gtag 8a0fb89f06ae0e10819c6279a450591c15bd5361c4004cb9827fea98d657d567 'https://www.googletagmanager.com/gtag/js?id=G-4JTHD1T1H0'
+          check cloudflare e1ac4849b9d4a498b68f8aca01e6ed99a11d94b35a2cec533b3916b8fb722fd6 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .authoritative-script-matches
+          git commit -m 'Record authoritative script source checks'
+          git push
