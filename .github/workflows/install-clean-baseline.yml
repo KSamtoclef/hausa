@@ -1,0 +1,112 @@
+name: Install clean verified baseline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.install-clean-baseline'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct exact supplied snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT='Samu Kyautar 30GB Data A Kowane Layi'
+          ASSETS="$ROOT"'_files'
+          mkdir -p /tmp/gtag-artifact /tmp/page-artifact "/tmp/final/$ASSETS"
+
+          # Download the two fixed export artifacts used to generate the tiny exact patches.
+          curl -fL --retry 2 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/9063741743/zip" \
+            -o /tmp/current-gtag.zip
+          curl -fL --retry 2 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/9063789397/zip" \
+            -o /tmp/current-page.zip
+          unzip -q /tmp/current-gtag.zip -d /tmp/gtag-artifact
+          unzip -q /tmp/current-page.zip -d /tmp/page-artifact
+
+          echo 'c5e7f19c7895411f63793f62421852ccc6af2b7814c720f1c45c709ab4666269  /tmp/gtag-artifact/js' | sha256sum -c -
+          echo '872a8ae7873d2fa52b65387d9eb9b0724c4847d7cfd68cdf3a6b85f95ebeb4ce  /tmp/page-artifact/page.html' | sha256sum -c -
+
+          base64 --decode .relay/gtag.linepatch.json.xz.b64 | xz --decompress --stdout > /tmp/gtag.patch.json
+          base64 --decode .relay/page.linepatch.json.xz.b64 | xz --decompress --stdout > /tmp/page.patch.json
+
+          python3 - <<'PY'
+          import base64, hashlib, json
+          from pathlib import Path
+
+          def apply_line_patch(src, patch_path, out):
+              source = Path(src).read_bytes()
+              patch = json.loads(Path(patch_path).read_text())
+              got = hashlib.sha256(source).hexdigest()
+              if got != patch['source_sha256']:
+                  raise SystemExit(f'source hash mismatch for {src}: {got}')
+              lines = source.splitlines(keepends=True)
+              for i1, i2, repl64 in reversed(patch['ops']):
+                  replacement = base64.b64decode(repl64)
+                  lines[i1:i2] = replacement.splitlines(keepends=True)
+              result = b''.join(lines)
+              got = hashlib.sha256(result).hexdigest()
+              if got != patch['target_sha256']:
+                  raise SystemExit(f'target hash mismatch for {out}: {got}')
+              Path(out).write_bytes(result)
+
+          apply_line_patch('/tmp/gtag-artifact/js', '/tmp/gtag.patch.json', '/tmp/final/Samu Kyautar 30GB Data A Kowane Layi_files/js')
+          apply_line_patch('/tmp/page-artifact/page.html', '/tmp/page.patch.json', '/tmp/final/Samu Kyautar 30GB Data A Kowane Layi.html')
+          PY
+
+          # Restore source-stable supplied assets, accepting them only at the authoritative ZIP hashes.
+          curl -fL --retry 2 --connect-timeout 10 \
+            'https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js' \
+            -o "/tmp/final/$ASSETS/jquery-latest.min.js.download"
+          curl -fL --retry 2 --connect-timeout 10 \
+            'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' \
+            -o "/tmp/final/$ASSETS/v4513226cdae34746b4dedf0b4dfa099e1781791509496"
+
+          cp .source-cache/25.png "/tmp/final/$ASSETS/25.png"
+
+          # Seven snapshot image filenames contain the exact same 503-byte supplied payload.
+          base64 --decode .relay/asset503.b64 > /tmp/asset503
+          for name in 0UHB1f0.png D3BlBjV.jpg KTvWL6j.jpg g6cV61A.png iuLQxh6.png sSMYbTT.png xp1ER6K.jpg; do
+            cp /tmp/asset503 "/tmp/final/$ASSETS/$name"
+          done
+
+          # Authoritative per-file verification from the prepared baseline ZIP.
+          echo 'cac5301dc0d65d6ef9e817685b1c2284ae58195e93f089aab81e1401504adcb3  /tmp/final/Samu Kyautar 30GB Data A Kowane Layi.html' | sha256sum -c -
+          echo '0186ef7eb7181b66aaf8565acc8ea9d83b7a1307db06561858d8ce66c5295a32  /tmp/final/Samu Kyautar 30GB Data A Kowane Layi_files/25.png' | sha256sum -c -
+          echo '540bc6dec1dd4b92ea4d3fb903f69eabf6d919afd48f4e312b163c28cff0f441  /tmp/final/Samu Kyautar 30GB Data A Kowane Layi_files/jquery-latest.min.js.download' | sha256sum -c -
+          echo '8a0fb89f06ae0e10819c6279a450591c15bd5361c4004cb9827fea98d657d567  /tmp/final/Samu Kyautar 30GB Data A Kowane Layi_files/js' | sha256sum -c -
+          echo 'e1ac4849b9d4a498b68f8aca01e6ed99a11d94b35a2cec533b3916b8fb722fd6  /tmp/final/Samu Kyautar 30GB Data A Kowane Layi_files/v4513226cdae34746b4dedf0b4dfa099e1781791509496' | sha256sum -c -
+          for name in 0UHB1f0.png D3BlBjV.jpg KTvWL6j.jpg g6cV61A.png iuLQxh6.png sSMYbTT.png xp1ER6K.jpg; do
+            echo "9b5936f4006146e4e1e9025b474c02863c0b5614132ad40db4b925a10e8bfbb9  /tmp/final/$ASSETS/$name" | sha256sum -c -
+          done
+
+          test "$(find /tmp/final -type f | wc -l)" -eq 12
+          grep -Fq '<title>Demo - Samu Kyautar 30GB Data A Kowane Layi</title>' "/tmp/final/$ROOT.html"
+
+          # Replace all migration scaffolding with only the supplied baseline tree.
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/final/. .
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Baseline original duplicate'
+          git push origin HEAD:main
+          git push origin HEAD:refs/heads/baseline-original-duplicate
