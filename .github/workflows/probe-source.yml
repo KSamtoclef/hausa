@@ -1,0 +1,19 @@
+name: Verify supplied asset source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.source-probe'
+
+jobs:
+  verify-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify source copy matches supplied 25.png exactly
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 2 --connect-timeout 10 'https://25gb-anniversary-data.altcore.online/25.png' -o /tmp/25.png
+          echo '0186ef7eb7181b66aaf8565acc8ea9d83b7a1307db06561858d8ce66c5295a32  /tmp/25.png' | sha256sum -c -
+          stat -c 'verified-size=%s' /tmp/25.png
