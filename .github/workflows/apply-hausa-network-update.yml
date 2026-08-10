@@ -1,0 +1,95 @@
+name: Apply Hausa network content update
+
+on:
+  push:
+    branches:
+      - edit-main-work
+    paths:
+      - .github/workflows/apply-hausa-network-update.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply requested content-only changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [
+              Path('index.html'),
+              Path('Samu Kyautar 30GB Data A Kowane Layi.html'),
+          ]
+
+          replacements = [
+              ('<title>Demo - Samu Kyautar 30GB Data A Kowane Layi</title>', '<title>Demo - Samu Kyautar 25GB Data A MTN, Airtel da Glo</title>'),
+              ('<meta name="og:title" content="Kyautar 25GB Na Murnar Cika Shekara 25">', '<meta name="og:title" content="Kyautar 25GB Ga Masu Amfani da MTN, Airtel da Glo">'),
+              ('<meta property="og:description" content=" Samu Kyautar 25GB Daga MTN Na Murnar Cika Shekara 25">', '<meta property="og:description" content=" Samu Kyautar 25GB Ga Masu Amfani da MTN, Airtel da Glo">'),
+              ('Kamfanin MTN na bada kyautar 25GB Data na murnar cika shekara 25 ku hanzarta cika fom dake ƙasa sannan ku jira kadan don samun kyautar data yanzu.', 'Kamfanonin MTN, Airtel da Glo na bada kyautar 25GB Data na murnar cika shekara 25 ku hanzarta cika fom dake ƙasa sannan ku jira kadan don samun kyautar data yanzu.'),
+              ('Kamfanin MTN na bada <span class="amount">Kyautar 25GB Data</span> Na murnar cika shekara 25 da kafuwa.', 'Kamfanonin MTN, Airtel da Glo na bada <span class="amount">Kyautar 25GB Data</span> Na murnar cika shekara 25 da kafuwa.'),
+              ('<option value="1">MTN</option>', '<option value="1">MTN</option>\n<option value="2">Airtel</option>\n<option value="3">Glo</option>'),
+              ('<span id="comments">24K comments</span>', '<span id="comments">24K sharhi</span>'),
+              ('<span id="shares">13K shares</span>', '<span id="shares">13K rabawa</span>'),
+              ('<a class="liked">Like</a>', '<a class="liked">So</a>'),
+              ('<i class="fa fa-comment-o"></i> Comment', '<i class="fa fa-comment-o"></i> Sharhi'),
+              ('<i class="fa fa-share"></i> Share', '<i class="fa fa-share"></i> Raba'),
+              ('Thank you very much. I did not believe in these things, I swear to God, I still could not believe that I got free 25GB Data.', 'Na gode sosai. Da farko ban yarda da irin wannan ba, wallahi har yanzu ban gaskata cewa na samu 25GB Data kyauta ba.'),
+              ('Please i got only 20GB, When will i get my remaining 5GB', 'Don Allah, 20GB kawai na samu. Yaushe zan samu sauran 5GB dina?'),
+              ('Happy 25th Anniversary, I have accumulated over 50GB Here Already.', 'Barka da cika shekara 25, na riga na tara sama da 50GB a nan.'),
+              ('❤️ Thank you very much MTN, I really need this Free Offer ', '❤️ Na gode sosai, ina matukar bukatar wannan kyautar data. '),
+              ('>Like</span> · <span class="action">Reply</span>', '>So</span> · <span class="action">Amsa</span>'),
+              ('placeholder="Write a comment..."', 'placeholder="Rubuta sharhi..."'),
+              ('comments + "K comments"', 'comments + "K sharhi"'),
+              ('shares + "K shares"', 'shares + "K rabawa"'),
+              ('$(this).html("Like")', '$(this).html("So")'),
+              ('$(this).html("Unlike")', '$(this).html("Daina So")'),
+              ('var text1 = "*MTN NA BADA KYAUTAR 25GB DATA NA MURNAR CIKA SHEKARA 25*%0A%20%0A*Kamfanin MTN na bada kyautar 25GB data na 25 years anniversary%20don nuna farin cikinsu ga alumma.*', 'var text1 = "*MTN, AIRTEL DA GLO NA BADA KYAUTAR 25GB DATA*%0A%20%0A*Kamfanonin MTN, Airtel da Glo na bada kyautar 25GB data domin nuna farin cikinsu ga al’umma.*'),
+          ]
+
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+              original = text
+              missing = []
+              for old, new in replacements:
+                  if old not in text:
+                      missing.append(old[:100])
+                  text = text.replace(old, new)
+              if missing:
+                  raise SystemExit(f'{path}: expected source text missing: {missing}')
+              if text == original:
+                  raise SystemExit(f'{path}: no changes made')
+              path.write_text(text, encoding='utf-8')
+
+          # Keep both entry files byte-identical after the requested content edits.
+          if files[0].read_bytes() != files[1].read_bytes():
+              raise SystemExit('index.html and original HTML diverged')
+          PY
+
+      - name: Verify scope of change
+        shell: bash
+        run: |
+          git diff --check
+          git diff --stat
+          grep -q '<title>Demo - Samu Kyautar 25GB Data A MTN, Airtel da Glo</title>' index.html
+          grep -q '<option value="2">Airtel</option>' index.html
+          grep -q '<option value="3">Glo</option>' index.html
+          grep -q 'Rubuta sharhi' index.html
+
+      - name: Commit requested update to main
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- index.html 'Samu Kyautar 30GB Data A Kowane Layi.html'
+          git commit -m "Update Hausa campaign for MTN Airtel and Glo"
+          git push origin HEAD:main
