@@ -1,4 +1,0 @@
-jquery_google|MATCH|95786|https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js
-jquery_code|MATCH|95786|https://code.jquery.com/jquery-1.11.1.min.js
-gtag|MISS|490662|7a597378a167541abf5599727f7f161a863adf6722c7e59aa5f2bdca9a9081be|https://www.googletagmanager.com/gtag/js?id=G-4JTHD1T1H0
-cloudflare|MATCH|31612|https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496
