@@ -1,0 +1,106 @@
+name: Probe migration blobs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.blob-probe-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check expected orphan blobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/blob-list <<'EOF'
+          000 73bb9013cab85f27ef02db26c81f446a089c6184
+          001 e081f3c6e758dff61907c578ddf42a16e8a63545
+          002 4f67395e72dbd44b996b4cfcfddb176af89bafe9
+          003 2f01741bf7028e86d7045f8e00ac3834e890310e
+          004 9301cd48595462593d0344670902e46ad56523ec
+          005 ba40f7bae3310803e81b2943cf4cf282cb8c960b
+          006 d69ad6ff5ceb110a65f5ff14fa729d795b4237d0
+          007 3ae2df01a2fc89fa95e30f3889036cfd014e6499
+          008 47590175b81299175488673a9c52b536ebc6d8af
+          009 6a4dcdb27ba919a5fe06b1bd076a27d59d47fe23
+          010 957aa100f83619621389498ab17b265b9c96838c
+          011 734590523f94898db2090478da9ffb1d715d4d3e
+          012 6cbaee806b016823df0bdf860e942129ac3e0d91
+          013 e2bdea11ea0a67d14cb89dfca715275e9d7884ea
+          014 7ebd74910dff5fea1132a699e84da047b570473d
+          015 562644d278518aa584d4b81b4cb9a4c32228668f
+          016 11dfa0c7f2d1aae4d6fa51645ec1ad960be4aceb
+          017 436467cad5cdec873ad533d7c11fbcfd55183001
+          018 19bba24a3b88e7fd79503f0454608eed6315af64
+          019 0fa53eab95c15c0663170142056bea83ad32c8d5
+          020 8ecc7090cb520f201c75a41b3319229aa6044c2c
+          021 dab4e2ecd07fa8d72fb338d52d7899aba2bca745
+          022 6c821b00912bbe17a5659889ca56df9520957a2a
+          023 bba7f9d29d2e210063d42076d92ac118b4bf39cc
+          024 7a967a0d5756c26b6440353f28288c78b0c11f05
+          025 560017ac89706a2bf75b0709f4618ea25aea7fd7
+          026 99be590abafdd0523906972d27d803dddaa9aaba
+          027 5e9f5340ec008cf2b4bef6186d7949f3466c790d
+          028 f5d6f01fdade3a0efac5c43fe902b82b7c0ce73f
+          029 d60e194a333c90509bf6218945663d7471be6543
+          030 76f5cfffb04a5875ea18595ccec7f0644ab3bdb3
+          031 981a99fda998417602e03e9a3cad1b3526a81ad9
+          032 2a41300e57f9d1c0c9a3378ada093c715f5b3634
+          033 505bba3eb73d79a4bfd5ddf34168ca3a841facfe
+          034 87e1770a0df354f8f524b654f72e5e9851fd5e8d
+          035 c512133836998cc42d90a1dc10963545e8e99dd9
+          036 4483eb21acf803dd9fe440a333bef3f5f8bf5acd
+          037 83d654d47aee15010cf48296d01207d6ef91fe3d
+          038 22a25c9b1b4d64fe88451fdf8eeddfb40c582b24
+          039 15592216837987cc0559110566c1b7c4fd222768
+          040 53450f2fe1d44b9061163dac9d43bf7c104faf36
+          041 4d9f486c687c86fd81283f6fcb80ba9e7ec93b42
+          042 0ac25b43c7575d56feb1307eb390968d914be9cd
+          043 f79b6885e331585d6735f2a470997421084fb1ba
+          044 35d6f6758f9d9e2f9688efc6ae385a4d90f71dbd
+          045 8e2b504ed5409bb68a8461effaa1d7992dfb8026
+          046 1d0082f036d6c96247a359d07cc8364ab00a2997
+          047 0c2bb7ff37cd6798298307b4193278c845ee4d06
+          048 cbd69cef6f14c9d44c6f81b5616fcaefb02ae609
+          049 d32de6bd622c6f569ecdc7ac9438c4ae57bab3a7
+          050 f8cea5ef9ef3d48e91a14fbaa1cd614a2ce5d5e0
+          051 13c8bc66849875f1466f648d69b5422bc6983f40
+          052 00b9708f8d6e952000dcd5f68a98cc617870e645
+          053 317b1b54b636366fdb8e34ce2ac4cef7d89697c9
+          054 a69fee0232521faafe5b858041f1d34515f50375
+          055 1f9f966fde3f6ebffc51693474c224e2d2d00201
+          056 1b7eadc56f31345187122ca8a4a2017510ec13fd
+          057 018c220dc996ee138a07c3c22f62a51272f2e78d
+          058 0a5eb6b53a7a8c8b8bedbb849294652d8d0d653f
+          059 175f9258b5f3a66c494d6c93e5a311ae01dd597b
+          060 e11697955d5e17bd7ca37f4799b982607759000d
+          EOF
+
+          : > .blob-found
+          : > .blob-misses
+          while read -r idx sha; do
+            code=$(curl -sS -o /tmp/blob.json -w '%{http_code}' \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/git/blobs/$sha")
+            if [ "$code" = "200" ]; then
+              echo "$idx $sha" >> .blob-found
+            else
+              echo "$idx $sha" >> .blob-misses
+            fi
+          done < /tmp/blob-list
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .blob-found .blob-misses
+          git commit -m 'Record migration blob availability'
+          git push
