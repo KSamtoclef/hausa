@@ -1,0 +1,60 @@
+name: Use uploaded main banner
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/use-uploaded-main-banner.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update-banner:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Replace only the main banner image
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [Path('index.html'), Path('Samu Kyautar 30GB Data A Kowane Layi.html')]
+          old = '<center><img src="./Samu Kyautar 30GB Data A Kowane Layi_files/25.png" alt="Free-Data" style="width: 100%;"></center>'
+          new = '<center><img src="./977A9CCB-011E-4F18-937E-EF7C46E988B9.png" alt="Free-Data" style="width: 100%;"></center>'
+
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Main banner source not found in {path}')
+              if text.count(old) != 1:
+                  raise SystemExit(f'Unexpected banner occurrence count in {path}: {text.count(old)}')
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          if files[0].read_bytes() != files[1].read_bytes():
+              raise SystemExit('HTML entry files diverged')
+          PY
+
+      - name: Verify only intended banner reference
+        shell: bash
+        run: |
+          grep -q '<center><img src="./977A9CCB-011E-4F18-937E-EF7C46E988B9.png" alt="Free-Data" style="width: 100%;"></center>' index.html
+          grep -q 'share = "whatsapp://send?text=" + text1;' index.html
+          grep -q 'localStorage.setItem(saved, width);' index.html
+          git diff --check
+
+      - name: Commit and remove helper
+        shell: bash
+        run: |
+          rm -f .github/workflows/use-uploaded-main-banner.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Use uploaded image as main banner"
+          git pull --rebase origin main
+          git push origin HEAD:main
