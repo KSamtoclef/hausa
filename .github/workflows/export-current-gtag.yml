@@ -1,0 +1,27 @@
+name: Export current gtag
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.export-gtag-trigger'
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch current Google tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/export
+          curl -fL --retry 2 --connect-timeout 10 'https://www.googletagmanager.com/gtag/js?id=G-4JTHD1T1H0' -o /tmp/export/js
+          sha256sum /tmp/export/js
+          stat -c '%s' /tmp/export/js
+      - name: Upload fetched file
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-gtag
+          path: /tmp/export/js
+          if-no-files-found: error
+          compression-level: 0
