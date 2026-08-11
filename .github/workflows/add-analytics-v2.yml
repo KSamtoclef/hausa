@@ -1,0 +1,37 @@
+name: Add analytics codes
+on:
+  push:
+    paths:
+      - '.github/workflows/add-analytics-v2.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch files
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          targets = [Path('index.html'), Path('Samu Kyautar 30GB Data A Kowane Layi.html')]
+          anchor = '<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">'
+          data = 'PCEtLSBNZXRhIFBpeGVsIENvZGUgLS0+CjxzY3JpcHQ+CiFmdW5jdGlvbihmLGIsZSx2LG4sdCxzKQp7aWYoZi5mYnEpcmV0dXJuO249Zi5mYnE9ZnVuY3Rpb24oKXtuLmNhbGxNZXRob2Q/Cm4uY2FsbE1ldGhvZC5hcHBseShuLGFyZ3VtZW50cyk6bi5xdWV1ZS5wdXNoKGFyZ3VtZW50cyl9OwppZighZi5fZmJxKWYuX2ZicT1uO24ucHVzaD1uO24ubG9hZGVkPSEwO24udmVyc2lvbj0nMi4wJzsKbi5xdWV1ZT1bXTt0PWIuY3JlYXRlRWxlbWVudChlKTt0LmFzeW5jPSEwOwp0LnNyYz12O3M9Yi5nZXRFbGVtZW50c0J5VGFnTmFtZShlKVswXTsKcy5wYXJlbnROb2RlLmluc2VydEJlZm9yZSh0LHMpfSh3aW5kb3csIGRvY3VtZW50LCdzY3JpcHQnLAonaHR0cHM6Ly9jb25uZWN0LmZhY2Vib29rLm5ldC9lbl9VUy9mYmV2ZW50cy5qcycpOwpmYnEoJ2luaXQnLCAnMjc3Mzg2MTMxNjYyMzU4Jyk7CmZicSgndHJhY2snLCAnUGFnZVZpZXcnKTsKPC9zY3JpcHQ+Cjxub3NjcmlwdD48aW1nIGhlaWdodD0iMSIgd2lkdGg9IjEiIHN0eWxlPSJkaXNwbGF5Om5vbmUiCnNyYz0iaHR0cHM6Ly93d3cuZmFjZWJvb2suY29tL3RyP2lkPTI3NzM4NjEzMTY2MjM1OCZldj1QYWdlVmlldyZub3NjcmlwdD0xIgovPjwvbm9zY3JpcHQ+CjwhLS0gRW5kIE1ldGEgUGl4ZWwgQ29kZSAtLT4KPHNjcmlwdCB0eXBlPSJ0ZXh0L2phdmFzY3JpcHQiPgogICAgKGZ1bmN0aW9uKGMsbCxhLHIsaSx0LHkpewogICAgICAgIGNbYV09Y1thXXx8ZnVuY3Rpb24oKXsoY1thXS5xPWNbYV0ucXx8W10pLnB1c2goYXJndW1lbnRzKX07CiAgICAgICAgdD1sLmNyZWF0ZUVsZW1lbnQocik7dC5hc3luYz0xO3Quc3JjPSJodHRwczovL3d3dy5jbGFyaXR5Lm1zL3RhZy8iK2k7CiAgICAgICAgeT1sLmdldEVsZW1lbnRzQnlUYWdOYW1lKHIpWzBdO3kucGFyZW50Tm9kZS5pbnNlcnRCZWZvcmUodCx5KTsKICAgIH0pKHdpbmRvdywgZG9jdW1lbnQsICJjbGFyaXR5IiwgInNjcmlwdCIsICJ4emNucnh4cnBvIik7Cjwvc2NyaXB0Pgo='
+          block = base64.b64decode(data).decode()
+          for p in targets:
+              text = p.read_text()
+              if '277386131662358' not in text and 'xzcnrxxrpo' not in text:
+                  text = text.replace(anchor, anchor + '\n' + block, 1)
+                  p.write_text(text)
+          PY
+      - name: Save changes
+        run: |
+          rm -f .github/workflows/add-analytics-v2.yml .github/workflows/add-meta-clarity.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add Meta Pixel and Microsoft Clarity'
+          git push origin HEAD:main
