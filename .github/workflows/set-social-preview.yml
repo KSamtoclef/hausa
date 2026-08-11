@@ -1,0 +1,43 @@
+name: Set social preview image
+on:
+  push:
+    paths:
+      - '.github/workflows/set-social-preview.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Set OG URL and image
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          files = [Path('index.html'), Path('Samu Kyautar 30GB Data A Kowane Layi.html')]
+          site = 'https://www.voicefornigeria.com/'
+          image = 'https://www.voicefornigeria.com/AA3F0E76-7B63-49B4-A39F-D48AB23A22FB.png'
+
+          for p in files:
+              text = p.read_text(encoding='utf-8')
+              text, n1 = re.subn(r'<meta\s+(?:name|property)=["\']og:url["\']\s+content=["\'][^"\']*["\']\s*/?>', f'<meta property="og:url" content="{site}">', text, count=1, flags=re.I)
+              text, n2 = re.subn(r'<meta\s+(?:name|property)=["\']og:image["\']\s+content=["\'][^"\']*["\']\s*/?>', f'<meta property="og:image" content="{image}">', text, count=1, flags=re.I)
+              if n1 != 1 or n2 != 1:
+                  raise SystemExit(f'{p}: expected one og:url and one og:image')
+              if 'og:image:secure_url' not in text:
+                  text = text.replace(f'<meta property="og:image" content="{image}">', f'<meta property="og:image" content="{image}">\n<meta property="og:image:secure_url" content="{image}">', 1)
+              p.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit and clean helper
+        run: |
+          rm -f .github/workflows/set-social-preview.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html 'Samu Kyautar 30GB Data A Kowane Layi.html' .github/workflows/set-social-preview.yml
+          git commit -m 'Use current banner for voicefornigeria social preview'
+          git push origin HEAD:main
