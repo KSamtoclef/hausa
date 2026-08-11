@@ -1,0 +1,51 @@
+name: Fix duplicate share handler
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-duplicate-share-handler.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Keep one original share handler
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          files = [Path('index.html'), Path('Samu Kyautar 30GB Data A Kowane Layi.html')]
+          pattern = re.compile(r'\n\s*<script>\s*<!-- code by OD -->\s*document\.write\(unescape\(.*?\)\)\s*</script>\s*', re.S)
+
+          for p in files:
+              text = p.read_text(encoding='utf-8')
+              before_plain = text.count('$("#whatsapp").click(function ()')
+              if before_plain != 1:
+                  raise SystemExit(f'{p}: expected exactly one visible share handler, found {before_plain}')
+              new, n = pattern.subn('\n', text, count=1)
+              if n != 1:
+                  raise SystemExit(f'{p}: encoded duplicate share handler block not found exactly once')
+              if 'alert(error)' in new or 'alert%28error%29' in new:
+                  raise SystemExit(f'{p}: popup call still present')
+              if new.count('$("#whatsapp").click(function ()') != 1:
+                  raise SystemExit(f'{p}: expected one active share handler after fix')
+              # Preserve original progression values exactly.
+              required = ['width += 50;', 'width += 15;', 'width += 5;', 'width += 10;', 'width += 2;', 'width += 1;']
+              for token in required:
+                  if token not in new:
+                      raise SystemExit(f'{p}: missing original share progression token {token}')
+              p.write_text(new, encoding='utf-8')
+          PY
+      - name: Commit correction and remove helper
+        run: |
+          rm -f .github/workflows/fix-duplicate-share-handler.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html 'Samu Kyautar 30GB Data A Kowane Layi.html' .github/workflows/fix-duplicate-share-handler.yml
+          git commit -m 'Restore single original share progression handler'
+          git push origin HEAD:main
