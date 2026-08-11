@@ -1,0 +1,38 @@
+name: Remove Demo From Title
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-demo-title.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Remove Demo from browser title only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files = [
+              Path('index.html'),
+              Path('Samu Kyautar 30GB Data A Kowane Layi.html'),
+          ]
+          old = '<title>Demo - Samu Kyautar 25GB Data A MTN, Airtel da Glo</title>'
+          new = '<title>Samu Kyautar 25GB Data A MTN, Airtel da Glo</title>'
+          for p in files:
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected title not found in {p}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit exact title change and remove helper
+        run: |
+          rm -f .github/workflows/remove-demo-title.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html 'Samu Kyautar 30GB Data A Kowane Layi.html' .github/workflows/remove-demo-title.yml
+          git commit -m 'Remove Demo from browser title'
+          git push origin HEAD:main
