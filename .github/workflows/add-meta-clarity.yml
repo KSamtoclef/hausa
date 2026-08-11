@@ -1,0 +1,65 @@
+name: Add Meta Pixel and Clarity
+on:
+  push:
+    paths:
+      - '.github/workflows/add-meta-clarity.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Insert analytics blocks only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          targets = [Path('index.html'), Path('Samu Kyautar 30GB Data A Kowane Layi.html')]
+          anchor = '<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">'
+          block = '''
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '277386131662358');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=277386131662358&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xzcnrxxrpo");
+</script>
+'''
+
+          for p in targets:
+              text = p.read_text(encoding='utf-8')
+              if '277386131662358' in text or 'xzcnrxxrpo' in text:
+                  raise SystemExit(f'Analytics code already present in {p}')
+              if anchor not in text:
+                  raise SystemExit(f'Head anchor missing in {p}')
+              text = text.replace(anchor, anchor + block, 1)
+              p.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit and remove helper
+        run: |
+          rm -f .github/workflows/add-meta-clarity.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html 'Samu Kyautar 30GB Data A Kowane Layi.html' .github/workflows/add-meta-clarity.yml
+          git commit -m 'Add Meta Pixel and Microsoft Clarity'
+          git push origin HEAD:main
