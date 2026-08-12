@@ -577,21 +577,7 @@ Na gode sosai. Da farko ban yarda da irin wannan ba, wallahi har yanzu ban gaska
             }, 50);
         });
         async function saveRegistration(phone) {
-            try {
-                var response = await fetch("https://cqnovqvmxwmfngupgtov.supabase.co/rest/v1/rpc/register_anniversary_user", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "apikey": "sb_publishable_wm6kcw1pDhtyyORf0gLbVA_icVzmQ95"
-                    },
-                    body: JSON.stringify({
-                        p_phone: phone
-                    })
-                });
-                return response.ok;
-            } catch (e) {
-                return false;
-            }
+            return true;
         }
         $("#confirm").click(async function() {
             var phone = $("#name").val().trim();
