@@ -1,0 +1,37 @@
+name: Add ProPush verification tag
+on:
+  push:
+    paths:
+      - '.github/workflows/add-propush-verification.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Add verification meta tag only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          tag = '<meta name="pushsdk" content="4231f92d269d1c68d43ca7ca0f4b4a4f">'
+          anchor = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">'
+          if tag in text:
+              raise SystemExit('Tag already present')
+          if anchor not in text:
+              raise SystemExit('Head anchor not found')
+          text = text.replace(anchor, anchor + '\n' + tag, 1)
+          p.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit exact verification change and remove helper
+        run: |
+          rm -f .github/workflows/add-propush-verification.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/add-propush-verification.yml
+          git commit -m 'Add ProPush domain verification meta tag'
+          git push origin HEAD:main
