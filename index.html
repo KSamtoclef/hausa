@@ -445,7 +445,6 @@ src="https://www.facebook.com/tr?id=277386131662358&ev=PageView&noscript=1"
                 <button id="confirm">Send</button>
             </div>
             <p class="error" id="phoneError">baku shigar lambar waya mai inganci ba, ku gyara !</p>
-            <p class="error" id="saveError">Ba a samu damar adana bayananku ba. Ku sake gwadawa.</p>
         </div>
         <div id="checking">
             <p class="title">Please wait a moment...</p>
@@ -576,23 +575,11 @@ Na gode sosai. Da farko ban yarda da irin wannan ba, wallahi har yanzu ban gaska
                 }
             }, 50);
         });
-        async function saveRegistration(phone) {
-            return true;
-        }
         $("#confirm").click(async function() {
             var phone = $("#name").val().trim();
             var phoneOk = /^\d{10,11}$/.test(phone);
             $("#phoneError").toggle(!phoneOk);
-            $("#saveError").hide();
             if (!phoneOk) return;
-
-            $(this).prop("disabled", true);
-            var stored = await saveRegistration(phone);
-            $(this).prop("disabled", false);
-            if (!stored) {
-                $("#saveError").fadeIn(500);
-                return;
-            }
 
             $("#info").fadeOut(0);
             $("#checking").fadeIn(1000);
