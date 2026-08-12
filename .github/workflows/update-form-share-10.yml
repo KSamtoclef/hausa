@@ -1,0 +1,44 @@
+name: Update phone-only form and share count
+on:
+  push:
+    paths:
+      - '.github/workflows/update-form-share-10.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply exact requested changes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+
+          replacements = [
+              ('                <br><center><input type="email" placeholder="Shigar da Gmail/Email ɗinku" id="email" name="Email" inputmode="email" autocomplete="email" style="fontwidth: 244px;height: 56px;font-size: 18px;width: 330px;"></center>\n', ''),
+              ('            <p class="error" id="emailError">Ku shigar da Gmail/Email mai inganci.</p>\n', ''),
+              ('        async function saveRegistration(phone, email) {', '        async function saveRegistration(phone) {'),
+              ('                    body: JSON.stringify({\n                        p_phone: phone,\n                        p_email: email.toLowerCase()\n                    })', '                    body: JSON.stringify({\n                        p_phone: phone\n                    })'),
+              ('            var phone = $("#name").val().trim();\n            var email = $("#email").val().trim();\n            var phoneOk = /^\\d{10,11}$/.test(phone);\n            var emailOk = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);\n            $("#phoneError").toggle(!phoneOk);\n            $("#emailError").toggle(!emailOk);\n            $("#saveError").hide();\n            if (!phoneOk || !emailOk) return;\n\n            $(this).prop("disabled", true);\n            var stored = await saveRegistration(phone, email);', '            var phone = $("#name").val().trim();\n            var phoneOk = /^\\d{10,11}$/.test(phone);\n            $("#phoneError").toggle(!phoneOk);\n            $("#saveError").hide();\n            if (!phoneOk) return;\n\n            $(this).prop("disabled", true);\n            var stored = await saveRegistration(phone);'),
+              ('WhatsApp group guda 10 ko kuma zuwaga abokai guda 15 a WhatsApp', 'WhatsApp group guda 10 ko kuma zuwaga abokai guda 10 a WhatsApp'),
+              ('    } else if (width == 90) {\n        width += 1;\n    } else if (width == 91) {\n        width += 1;\n    } else if (width == 92) {\n        width += 1;\n    } else if (width == 93) {\n        width += 1;\n    } else if (width == 94) {\n        width += 1;\n    } else if (width == 95) {\n        width += 1;\n    } else if (width == 96) {\n        width += 2;\n    } else {', '    } else if (width == 90) {\n        width += 1;\n    } else {')
+          ]
+
+          for old, new in replacements:
+              if old not in s:
+                  raise SystemExit('Expected target not found; no changes committed')
+              s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+      - name: Commit changes and remove helper
+        run: |
+          rm -f .github/workflows/update-form-share-10.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .github/workflows/update-form-share-10.yml
+          git commit -m "Remove email field and reduce sharing to 10" || exit 0
+          git push
